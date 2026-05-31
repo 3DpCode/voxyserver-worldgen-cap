@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "voxyserver_worldgen_cap",
+  "version": "${version}",
+  "name": "VoxyServer-WorldGen Cap",
+  "description": "Bounds the per-player uplink cost of a Voxy LOD horizon on dedicated servers by reconciling VoxyServer and Voxy WorldGen V2. Cancels WG's per-chunk LOD broadcast and VoxyServer's eager per-section dirty broadcast for fresh-load sections, leaving VoxyServer's batched scan path as the delivery mechanism for new terrain while preserving the dirty path for player block edits. Relaxes the 3-of-4 chunk-footprint initial-load gate so version bumps land immediately when sections are voxelized.",
+  "authors": ["3DpCode"],
+  "license": "MIT",
+  "environment": "server",
+  "mixins": [
+    "voxyserver_worldgen_cap.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": ">=1.21",
+    "java": ">=25",
+    "voxyserver": "*",
+    "voxyworldgenv2": "*"
+  }
+}
