@@ -1,28 +1,28 @@
 # VoxyServer-WorldGen Cap
 
-A **server-side-only** Fabric mod that lets you run a 128-chunk Voxy LOD horizon on a normal residential uplink instead of a datacenter pipe.
-
-Clients do **not** need to install anything. Plain Voxy on the client side.
+Fabric mod that reduces server upload bandwidth when streaming Voxy LODs. Server-side only — clients don't need this mod.
 
 ## Results
 
-Same configs, same teleport, same two minutes of standing still after arriving.
+Teleported to a distant location and stood still for about two minutes. Exact same config, just without voxyserver-worldgen-cap.
 
 | Without the mod (~25 Mbit) | With the mod (~3 Mbit) |
 |---|---|
 | ![before](assets/before-2min-25mbit.png) | ![after](assets/after-2min-3mbit.png) |
 
-Stock Voxy sends LOD data the moment any chunk finishes generating, with no rate limit. The uplink spikes, far-away terrain pops into view before nearby terrain is ready (red ellipse), and sections that raced ahead of the upstream initial-load safety check are dropped on the floor, leaving holes (red X's).
+Without the mod, the server pushes LOD data to the client every time a chunk finishes generating, with no rate limit. The upload spikes, distant terrain shows up before nearby terrain is ready (red ellipse), and some chunks never load at all (red X's).
 
-With the mod, those event-driven broadcasts — WG's per-chunk completion and VoxyServer's per-section dirty push — are cancelled for fresh-load sections. Delivery falls to VoxyServer's existing scan path, which is rate-bounded by `maxSectionsPerTickPerPlayer` and walks outward from the player one square ring at a time. The fill is clean and predictable, at a fraction of the bandwidth.
+With the mod, those instant pushes are turned off for newly-generated chunks. Instead, the server fills the LOD horizon at a steady rate, walking outward from the player. The result is a clean, even fill at a fraction of the bandwidth.
 
 ## What it does
 
-Voxy and Voxy WorldGen V2 each ship their own LOD broadcast on their own network channel. Running both at once means the same terrain ends up on the wire twice, at whatever rate WG can generate it. This mod stops both eager paths for newly-generated terrain and lets VoxyServer's rate-limited scan path deliver instead. Player block edits still travel on the fast path, so towers and builds appear instantly at long range.
+Voxy and Voxy WorldGen V2 each send their own copy of LOD data on separate network channels every time a chunk finishes generating. The same terrain ends up on the wire twice, at whatever rate the world generator can produce it. This mod intercepts both at the source.
 
-- `NetworkHandlerMixin` cancels `voxy_worldgen_v2`'s `broadcastLODData` and `sendLODData`.
-- `LodStreamingServiceMixin` cancels `VoxyServer.pushDirtySection` only when the section is in `initialLoadSections` (the fresh-load path). Block edits go through `markChunkPendingDirty` + `revoxelizeChunk`, which never touch that map — they keep the ~1 tick dirty push.
-- The same mixin also relaxes the `isInitialLoadReady` 3-of-4-chunks gate so fresh dirty events flow to the version bump that the scan path needs.
+`NetworkHandlerMixin` cancels Voxy WorldGen V2's `broadcastLODData` and `sendLODData`. Voxy WorldGen V2 still pre-generates terrain — it just stops sending it to clients.
+
+`LodStreamingServiceMixin` cancels VoxyServer's `pushDirtySection`, but only for newly-generated sections (the ones still in `initialLoadSections`). Player block edits travel through a different path (`markChunkPendingDirty` + `revoxelizeChunk`) that never touches `initialLoadSections`, so edits still get pushed instantly. The same mixin also bypasses VoxyServer's `isInitialLoadReady` 3-of-4-chunks safety check, which would otherwise drop sections before the version bump that the scan path needs to deliver them.
+
+What's left is VoxyServer's existing scan path: every tick, it walks outward from each player and sends up to `maxSectionsPerTickPerPlayer` sections of LOD data. That rate is the new cap.
 
 ## Dependencies
 
