@@ -12,19 +12,17 @@ Same configs, same teleport, same two minutes of standing still after arriving.
 |---|---|
 | ![before](assets/before-2min-25mbit.png) | ![after](assets/after-2min-3mbit.png) |
 
-**Plain English:** stock Voxy sends LOD data the moment any chunk finishes generating, with no rate limit. That spikes your upload, scatters far-away terrain into view before nearby terrain is ready (red ellipse), and leaves holes where chunks raced ahead of the safety check (red X's). With the mod, the server delivers LODs at a steady budget per tick, walking outward from the player. Result is a clean, predictable fill at a fraction of the bandwidth.
+Stock Voxy sends LOD data the moment any chunk finishes generating, with no rate limit. The uplink spikes, far-away terrain pops into view before nearby terrain is ready (red ellipse), and sections that raced ahead of the upstream initial-load safety check are dropped on the floor, leaving holes (red X's).
 
-**Technically:** WG's broadcast and VoxyServer's eager dirty-push are both event-driven (per-chunk-completion). The mod cancels them for fresh-load sections and leaves all delivery to VoxyServer's existing scan path, which is rate-bounded by `maxSectionsPerTickPerPlayer`.
+With the mod, those event-driven broadcasts — WG's per-chunk completion and VoxyServer's per-section dirty push — are cancelled for fresh-load sections. Delivery falls to VoxyServer's existing scan path, which is rate-bounded by `maxSectionsPerTickPerPlayer` and walks outward from the player one square ring at a time. The fill is clean and predictable, at a fraction of the bandwidth.
 
 ## What it does
 
-**Plain English:** stops the two mods from each sending the same LOD data over different channels at full speed. New terrain gets delivered slower but predictably; player-built things still appear instantly.
-
-**Technically:**
+Voxy and Voxy WorldGen V2 each ship their own LOD broadcast on their own network channel. Running both at once means the same terrain ends up on the wire twice, at whatever rate WG can generate it. This mod stops both eager paths for newly-generated terrain and lets VoxyServer's rate-limited scan path deliver instead. Player block edits still travel on the fast path, so towers and builds appear instantly at long range.
 
 - `NetworkHandlerMixin` cancels `voxy_worldgen_v2`'s `broadcastLODData` and `sendLODData`.
 - `LodStreamingServiceMixin` cancels `VoxyServer.pushDirtySection` only when the section is in `initialLoadSections` (the fresh-load path). Block edits go through `markChunkPendingDirty` + `revoxelizeChunk`, which never touch that map — they keep the ~1 tick dirty push.
-- Also relaxes the `isInitialLoadReady` 3-of-4-chunks gate so fresh dirty events flow to the version bump that the scan path needs.
+- The same mixin also relaxes the `isInitialLoadReady` 3-of-4-chunks gate so fresh dirty events flow to the version bump that the scan path needs.
 
 ## Dependencies
 
