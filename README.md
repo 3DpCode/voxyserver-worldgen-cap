@@ -71,6 +71,10 @@ Scale `maxSectionsPerTickPerPlayer` and `sectionsPerPacket` up together to trade
 
 The fresh-vs-edit discriminator relies on `markChunkPendingInitialLoad` being the only path that populates `initialLoadSections`. If a future VoxyServer release changes which paths touch that map, the mod could mis-classify block edits or fresh loads. Re-verify if you upgrade VoxyServer past 1.1.6.
 
+## How this was made
+
+Vibe-coded in one session with Claude Opus 4.7 against the decompiled VoxyServer 1.1.6 and Voxy WorldGen V2 sources. No formal tests, no upstream involvement from either mod's author. It works on my server with the config above — that's the extent of what I can promise. Use at your own risk.
+
 ## License
 
 MIT.
