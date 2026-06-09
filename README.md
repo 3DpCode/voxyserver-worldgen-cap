@@ -27,7 +27,7 @@ What's left is VoxyServer's existing scan path: every tick, it walks outward fro
 ## Dependencies
 
 - [VoxyServer](https://modrinth.com/mod/voxyserver) (server-side)
-- [Voxy World Gen V2](https://modrinth.com/mod/voxy-world-gen-v2) (server-side)
+- [Voxy World Gen V2](https://modrinth.com/mod/voxy-worldgen) (server-side)
 - [Voxy](https://modrinth.com/mod/voxy) (client-side renderer — already required by the others)
 
 ## Tested setup
